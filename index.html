@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Investment Advisor Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg:       #0f1117;
+      --card:     #1a1d2e;
+      --border:   #2d3148;
+      --accent:   #6366f1;
+      --green:    #22c55e;
+      --red:      #ef4444;
+      --amber:    #f59e0b;
+      --text:     #e2e8f0;
+      --muted:    #64748b;
+      --radius:   12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg); color: var(--text);
+      font-size: 14px; line-height: 1.6;
+      padding: 16px;
+    }
+    h1 { font-size: 1.5rem; font-weight: 700; }
+    h2 { font-size: 1.1rem; font-weight: 600; margin-bottom: 12px; color: var(--text); }
+    .header { display: flex; justify-content: space-between; align-items: center;
+               margin-bottom: 24px; flex-wrap: wrap; gap: 8px; }
+    .subtitle { color: var(--muted); font-size: 0.85rem; }
+    .logo { font-size: 1.8rem; margin-right: 8px; }
+
+    /* KPI Row */
+    .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+                gap: 12px; margin-bottom: 24px; }
+    .kpi-card { background: var(--card); border: 1px solid var(--border);
+                 border-radius: var(--radius); padding: 16px; }
+    .kpi-highlight { border-color: var(--accent); }
+    .kpi-title { font-size: 0.75rem; color: var(--muted); text-transform: uppercase;
+                  letter-spacing: 0.05em; margin-bottom: 4px; }
+    .kpi-value { font-size: 1.6rem; font-weight: 700; line-height: 1.2; }
+    .kpi-sub { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+    .kpi-green { color: var(--green); }
+    .kpi-red   { color: var(--red); }
+
+    /* Section */
+    .section { background: var(--card); border: 1px solid var(--border);
+                border-radius: var(--radius); padding: 20px; margin-bottom: 20px; }
+
+    /* Recommendation cards */
+    .rec-card { background: var(--bg); border: 1px solid var(--border);
+                 border-radius: var(--radius); padding: 16px; margin-bottom: 14px; }
+    .rec-header { display: flex; justify-content: space-between; align-items: flex-start;
+                   flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .rec-title { display: flex; align-items: center; gap: 10px; }
+    .rank-icon { font-size: 1.6rem; }
+    .stock-name { font-size: 1rem; font-weight: 700; }
+    .stock-meta { font-size: 0.75rem; color: var(--muted); }
+    .rec-right { text-align: right; }
+    .stock-price { font-size: 1.1rem; font-weight: 600; color: var(--accent); }
+    .qty-note { font-size: 0.75rem; color: var(--muted); }
+
+    /* Trade badge */
+    .trade-badge { display: inline-block; padding: 2px 8px; border-radius: 20px;
+                    font-size: 0.7rem; font-weight: 600; margin-bottom: 4px; }
+    .traded  { background: rgba(34,197,94,0.15);  color: var(--green); }
+    .skipped { background: rgba(239,68,68,0.15);   color: var(--red); }
+    .pending { background: rgba(245,158,11,0.15);  color: var(--amber); }
+
+    /* Score bars */
+    .score-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 10px; }
+    .score-item { flex: 1; min-width: 100px; }
+    .score-sublabel { font-size: 0.7rem; color: var(--muted); margin-bottom: 3px; }
+    .score-bar-wrap { background: var(--border); border-radius: 4px;
+                       height: 6px; margin-bottom: 2px; overflow: hidden; }
+    .score-bar { height: 6px; border-radius: 4px; transition: width 0.5s; }
+    .score-label { font-size: 0.75rem; font-weight: 600; }
+
+    /* Metric pills */
+    .metrics-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .pill { padding: 2px 8px; border-radius: 12px; font-size: 0.72rem; font-weight: 500; }
+    .pill-green { background: rgba(34,197,94,0.15); color: var(--green); }
+    .pill-red   { background: rgba(239,68,68,0.15); color: var(--red); }
+
+    /* Returns row */
+    .returns-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .return-cell { text-align: center; }
+    .return-label { font-size: 0.65rem; color: var(--muted); margin-bottom: 2px; }
+
+    /* Return badges */
+    .badge { display: inline-block; padding: 2px 7px; border-radius: 8px;
+              font-size: 0.72rem; font-weight: 600; }
+    .badge-pos     { background: rgba(34,197,94,0.15); color: var(--green); }
+    .badge-neg     { background: rgba(239,68,68,0.15); color: var(--red); }
+    .badge-neutral { background: var(--border); color: var(--muted); }
+
+    /* Win-rate mini KPIs */
+    .kpi-mini-row { display: flex; flex-wrap: wrap; gap: 12px; }
+    .kpi-mini { text-align: center; min-width: 70px; }
+    .kpi-mini-label { font-size: 0.65rem; color: var(--muted); }
+    .kpi-mini-val { font-size: 1rem; font-weight: 700; }
+
+    /* History table */
+    table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    th { text-align: left; padding: 8px 10px; color: var(--muted);
+          border-bottom: 1px solid var(--border); font-weight: 500; }
+    td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+    tr:last-child td { border-bottom: none; }
+    .center { text-align: center; }
+    .muted { color: var(--muted); font-style: italic; }
+
+    /* Charts */
+    .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+    .chart-wrap { position: relative; height: 220px; }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .kpi-row { grid-template-columns: 1fr 1fr; }
+      .score-row { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div style="display:flex;align-items:center">
+    <span class="logo">📈</span>
+    <div>
+      <h1>Investment Advisor</h1>
+      <div class="subtitle">NIFTY100 · Daily Picks · Balanced Strategy</div>
+    </div>
+  </div>
+  <div class="subtitle">Updated: 28 Apr 2026, 07:49 PM</div>
+</div>
+
+<!-- KPI Summary -->
+<div class="kpi-row">
+  <div class="kpi-card">
+    <div class="kpi-title">Total Invested</div>
+    <div class="kpi-value">₹0</div>
+    <div class="kpi-sub">0 trades executed</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-title">Total Recommendations</div>
+    <div class="kpi-value">1</div>
+    <div class="kpi-sub">Since inception</div>
+  </div>
+  
+  <div class="kpi-card">
+    <div class="kpi-title">Today's Date</div>
+    <div class="kpi-value" style="font-size:1.1rem">2026-04-28</div>
+    <div class="kpi-sub">2 stocks recommended</div>
+  </div>
+</div>
+
+<!-- Today's Recommendation -->
+<div class="section">
+  <h2>🗓️ Today's Recommendation — 2026-04-28</h2>
+  
+    <div class="rec-card">
+      <div class="rec-header">
+        <div class="rec-title">
+          <span class="rank-icon">🥇</span>
+          <div>
+            <div class="stock-name">Muthoot Finance Limited</div>
+            <div class="stock-meta">MUTHOOTFIN · NBFC</div>
+          </div>
+        </div>
+        <div class="rec-right">
+          <span class="trade-badge pending">⏳ Awaiting</span>
+          <div class="stock-price">₹3,495.50</div>
+          <div class="qty-note">₹3,496 exceeds daily budget — buy 1 share if flexible</div>
+        </div>
+      </div>
+      <div class="score-row">
+        <div class="score-item">
+          <div class="score-sublabel">Composite</div>
+          <div class="score-bar-wrap"><div class="score-bar" style="width:74%;background:#22c55e"></div></div><span class="score-label">74</span>
+        </div>
+        <div class="score-item">
+          <div class="score-sublabel">Fundamental</div>
+          <div class="score-bar-wrap"><div class="score-bar" style="width:81%;background:#22c55e"></div></div><span class="score-label">81</span>
+        </div>
+        <div class="score-item">
+          <div class="score-sublabel">Technical</div>
+          <div class="score-bar-wrap"><div class="score-bar" style="width:62%;background:#f59e0b"></div></div><span class="score-label">62</span>
+        </div>
+      </div>
+      <div class="metrics-row"></div>
+      <div class="returns-row"><div class="return-cell"><div class="return-label">3-Day</div><span class="badge badge-neutral">—</span></div><div class="return-cell"><div class="return-label">1-Week</div><span class="badge badge-neutral">—</span></div><div class="return-cell"><div class="return-label">2-Week</div><span class="badge badge-neutral">—</span></div><div class="return-cell"><div class="return-label">1-Month</div><span class="badge badge-neutral">—</span></div><div class="return-cell"><div class="return-label">3-Month</div><span class="badge badge-neutral">—</span></div><div class="return-cell"><div class="return-label">1-Year</div><span class="badge badge-neutral">—</span></div><div class="return-cell"><div class="return-label">3-Year</div><span class="badge badge-neutral">—</span></div></div>
+    </div>
+    <div class="rec-card">
+      <div class="rec-header">
+        <div class="rec-title">
+          <span class="rank-icon">🥈</span>
+          <div>
+            <div class="stock-name">State Bank of India</div>
+            <div class="stock-meta">SBIN · BANKING</div>
+          </div>
+        </div>
+        <div class="rec-right">
+          <span class="trade-badge pending">⏳ Awaiting</span>
+          <div class="stock-price">₹1,092.60</div>
+          <div class="qty-note">1 share @ ₹1,092.60</div>
+        </div>
+      </div>
+      <div class="score-row">
+        <div class="score-item">
+          <div class="score-sublabel">Composite</div>
+          <div class="score-bar-wrap"><div class="score-bar" style="width:67%;background:#f59e0b"></div></div><span class="score-label">67</span>
+        </div>
+        <div class="score-item">
+          <div class="score-sublabel">Fundamental</div>
+          <div class="score-bar-wrap"><div class="score-bar" style="width:69%;background:#f59e0b"></div></div><span class="score-label">69</span>
+        </div>
+        <div class="score-item">
+          <div class="score-sublabel">Technical</div>
+          <div class="score-bar-wrap"><div class="score-bar" style="width:59%;background:#f59e0b"></div></div><span class="score-label">59</span>
+        </div>
+      </div>
+      <div class="metrics-row"></div>
+      <div class="returns-row"><div class="return-cell"><div class="return-label">3-Day</div><span class="badge badge-neutral">—</span></div><div class="return-cell"><div class="return-label">1-Week</div><span class="badge badge-neutral">—</span></div><div class="return-cell"><div class="return-label">2-Week</div><span class="badge badge-neutral">—</span></div><div class="return-cell"><div class="return-label">1-Month</div><span class="badge badge-neutral">—</span></div><div class="return-cell"><div class="return-label">3-Month</div><span class="badge badge-neutral">—</span></div><div class="return-cell"><div class="return-label">1-Year</div><span class="badge badge-neutral">—</span></div><div class="return-cell"><div class="return-label">3-Year</div><span class="badge badge-neutral">—</span></div></div>
+    </div>
+</div>
+
+<!-- Performance Charts -->
+<div class="section">
+  <h2>📊 Performance Analytics</h2>
+  <div class="charts-grid">
+    <div>
+      <div class="kpi-title" style="margin-bottom:8px">Win Rate by Holding Period</div>
+      <div class="chart-wrap"><canvas id="winRateChart"></canvas></div>
+    </div>
+    <div>
+      <div class="kpi-title" style="margin-bottom:8px">Cumulative P&L (Traded Picks)</div>
+      <div class="chart-wrap"><canvas id="pnlChart"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- Win Rates & Avg Returns -->
+<div class="section">
+  <h2>📈 Win Rates by Interval</h2>
+  <div class="kpi-mini-row"><p class='muted'>Not enough data yet</p></div>
+  <br>
+  <h2>📉 Average Returns by Interval</h2>
+  <div class="kpi-mini-row"><p class='muted'>Not enough data yet</p></div>
+</div>
+
+<!-- History Table -->
+<div class="section">
+  <h2>📋 Recommendation History (Last 30 Days)</h2>
+  <div style="overflow-x:auto">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Stock</th>
+          <th>Price</th>
+          <th>Score</th>
+          <th class="center">Traded</th>
+          <th class="center">7-Day</th>
+          <th class="center">30-Day</th>
+          <th class="center">90-Day</th>
+        </tr>
+      </thead>
+      <tbody><tr>
+              <td>2026-04-28</td>
+              <td><strong>MUTHOOTFIN</strong></td>
+              <td>₹3,495.50</td>
+              <td>73.9/100</td>
+              <td class="center">⏳</td>
+              <td class="center"><span class="badge badge-neutral">—</span></td>
+              <td class="center"><span class="badge badge-neutral">—</span></td>
+              <td class="center"><span class="badge badge-neutral">—</span></td>
+            </tr><tr>
+              <td>2026-04-28</td>
+              <td><strong>SBIN</strong></td>
+              <td>₹1,092.60</td>
+              <td>66.6/100</td>
+              <td class="center">⏳</td>
+              <td class="center"><span class="badge badge-neutral">—</span></td>
+              <td class="center"><span class="badge badge-neutral">—</span></td>
+              <td class="center"><span class="badge badge-neutral">—</span></td>
+            </tr></tbody>
+    </table>
+  </div>
+</div>
+
+<div style="text-align:center;color:var(--muted);font-size:0.7rem;margin-top:16px">
+  ⚠️ For educational purposes only. Not SEBI-registered investment advice.
+  Always do your own research before investing.
+</div>
+
+<script>
+  // ── Win Rate Chart ──────────────────────────────────────────────────────
+  const wr = document.getElementById('winRateChart').getContext('2d');
+  new Chart(wr, {
+    type: 'bar',
+    data: {
+      labels: ["3-Day", "1-Week", "2-Week", "1-Month", "3-Month", "1-Year", "3-Year"],
+      datasets: [{
+        label: 'Win Rate %',
+        data: [null, null, null, null, null, null, null],
+        backgroundColor: [null, null, null, null, null, null, null].map(v => v == null ? '#2d3148' : v >= 50 ? 'rgba(34,197,94,0.7)' : 'rgba(239,68,68,0.7)'),
+        borderRadius: 6,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: {
+        label: ctx => ctx.raw == null ? 'No data' : ctx.raw + '%'
+      } } },
+      scales: {
+        x: { grid: { color: '#2d3148' }, ticks: { color: '#64748b', font: { size: 10 } } },
+        y: { grid: { color: '#2d3148' }, ticks: { color: '#64748b' }, min: 0, max: 100,
+              title: { display: true, text: 'Win Rate %', color: '#64748b' } }
+      }
+    }
+  });
+
+  // ── Cumulative P&L Chart ────────────────────────────────────────────────
+  const pnl = document.getElementById('pnlChart').getContext('2d');
+  const pnlData = [];
+  const pnlLabels = [];
+  new Chart(pnl, {
+    type: 'line',
+    data: {
+      labels: pnlLabels.length ? pnlLabels : ['No data'],
+      datasets: [{
+        label: 'P&L (₹)',
+        data: pnlData.length ? pnlData : [0],
+        borderColor: pnlData.length && pnlData[pnlData.length-1] >= 0 ? '#22c55e' : '#ef4444',
+        backgroundColor: pnlData.length && pnlData[pnlData.length-1] >= 0
+          ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 4,
+        pointBackgroundColor: '#6366f1',
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false },
+                  tooltip: { callbacks: {
+                    label: ctx => '₹' + ctx.raw.toLocaleString('en-IN')
+                  } } },
+      scales: {
+        x: { grid: { color: '#2d3148' }, ticks: { color: '#64748b', font: { size: 9 },
+              maxRotation: 45, autoSkip: true, maxTicksLimit: 8 } },
+        y: { grid: { color: '#2d3148' }, ticks: { color: '#64748b',
+              callback: v => '₹' + v.toLocaleString('en-IN') } }
+      }
+    }
+  });
+</script>
+</body>
+</html>
